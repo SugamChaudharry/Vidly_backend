@@ -1,13 +1,34 @@
 // require("dotenv").config({path: './env'});  // bad for conistency
 import dotenv from "dotenv";
 import connectDB from "./db/index.js";
+import { app } from "express";
 
 dotenv.config({
     path: './env'
 })
 
+const PORT = process.env.PORT;
 
-connectDB();
+connectDB()
+.then(() => {
+    app.on("error" , (error) => {
+        console.log("ERR: ", error);
+        throw error;
+    })
+    app.listen( PORT || 8000, () => {
+        console.log(` server is running at POrt :🫡:🫡: ${PORT} :🫡:🫡:`);
+    })
+})
+.catch((err) => {
+    console.log("MongoDB connection Failed !!! ", err);
+})
+
+
+
+
+
+
+
 
 // in this approch we make iife function and for connecting database we have use good approch by using try and catch for error handling and async await for wating for data to come form other contnent
 /*
