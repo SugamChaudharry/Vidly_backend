@@ -1,7 +1,7 @@
 // require("dotenv").config({path: './env'});  // bad for conistency
 import dotenv from "dotenv";
 import connectDB from "./db/index.js";
-import { app } from "express";
+import { app } from "./app.js";
 
 dotenv.config({
     path: './env'
@@ -16,7 +16,7 @@ connectDB()
         throw error;
     })
     app.listen( PORT || 8000, () => {
-        console.log(` server is running at POrt :🫡:🫡: ${PORT} :🫡:🫡:`);
+        console.log(` server is running at Port :🫡:🫡: ${PORT} :🫡:🫡:`);
     })
 })
 .catch((err) => {
