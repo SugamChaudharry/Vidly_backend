@@ -4,7 +4,7 @@ import fs from "fs"
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINAEY_API_SECRET,
+  api_secret: process.env.CLOUDINAEY_API_SECRET
 });
 
 const uploadOnCloudinary = async (localFilePath) => {
@@ -16,12 +16,14 @@ const uploadOnCloudinary = async (localFilePath) => {
         })
         // file has been uploded successfully
 
-        console.log("file has been uploded successfully on cloudinery",response.url);
-        console.log(response);
-        
+        // console.log("file has been uploded successfully on cloudinery",response.url);
+        // console.log(response);
+
+        fs.unlinkSync(localFilePath);
         return response;
     } catch (error) {
         fs.unlinkSync(localFilePath) // removed the tempory saved file
+        return null;
     }
 }
 

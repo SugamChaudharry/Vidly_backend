@@ -15,22 +15,28 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 // return res
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { username, fullname, email, passward } = req.body;
+  const { username, fullname, email, password } = req.body;
 
   if (
-    [fullname, email, username, passward].some((field) => field?.trim() === "")
+    [fullname, email, username, password].some((field) => field?.trim() === "")
   ) {
     throw new ApiError(400, "all fields are required");
   }
 
-  const existedUser = User.findOne({
+  const existedUser = await User.findOne({
     $or: [{ username }, { email }],
   });
   if (existedUser) {
     throw new ApiError(409, "User with email or username already exists");
   }
-  const avatarLocalPath = req.field?.avatar[0]?.path;
-  const coverImageLocalPath = req.field?.coverImage[0]?.path;
+  const avatarLocalPath = req.files?.avatar[0]?.path;
+
+  // const coverImageLocalPath = req.files?.coverImage[0]?.path;
+  let coverImageLocalPath;
+  if (req.files && Array.isArray(req.files.coverImage)&&req.files.coverImage.length > 0) {
+    coverImageLocalPath = req.files.coverImage[0].path;
+  }
+  
 
   if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar file is required");
@@ -48,7 +54,7 @@ const registerUser = asyncHandler(async (req, res) => {
     avatar: avatar.url,
     coverImage: coverImage?.url || "",
     email,
-    passward,
+    password,
     username: username.toLowerCase()
   })
 
@@ -58,19 +64,19 @@ const registerUser = asyncHandler(async (req, res) => {
   if(!createdUser){
     throw new ApiError(500 , "Somthing went wrong while registring a user")
   }
+  // console.log("\nusername: ", username);
+  // console.log("fullname: ", fullname);
+  // console.log("email: ", email);
+  // console.log("password: ", password);
+  // console.log("req.body:", req.body);
+  // console.log(existedUser);
+  // console.log(req.files?.avatar);
+  // console.log(req.files);
 
-  return res.ststus(201).json(
+  return res.status(201).json(
     new ApiResponse(200 , createdUser , "User registered successfully")
   )
 
-  console.log("\nusername: ", username);
-  console.log("fullname: ", fullname);
-  console.log("email: ", email);
-  console.log("passward: ", passward);
-  console.log("req.body:", req.body);
-  console.log(existedUser);
-  console.log(req.field?.avatar);
-  console.log(req.field);
 });
 
 export { registerUser };
