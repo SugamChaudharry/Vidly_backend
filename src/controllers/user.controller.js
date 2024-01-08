@@ -4,6 +4,24 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinery.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 
+const generateAccessAndReffreshTokens = async(userId) => {
+  try {
+    const user = await User.findById(userId);
+    const accessToken = user.generateAccessToken()
+    const refreshToken = user.generateRefreshToken()
+
+    user.refreshToken = refreshToken
+    user.save({ validateBeforeSave : false})
+
+    return {accessToken , refreshToken}
+
+  } catch (error) {
+    throw new ApiError(500, "Somthing went wrong while generating refresh and access token")
+    
+  }
+}
+
+// // todos for registring a user
 // get user details from frontend
 // validation - not empty
 // check if user already exists: username, email
@@ -33,10 +51,13 @@ const registerUser = asyncHandler(async (req, res) => {
 
   // const coverImageLocalPath = req.files?.coverImage[0]?.path;
   let coverImageLocalPath;
-  if (req.files && Array.isArray(req.files.coverImage)&&req.files.coverImage.length > 0) {
+  if (
+    req.files &&
+    Array.isArray(req.files.coverImage) &&
+    req.files.coverImage.length > 0
+  ) {
     coverImageLocalPath = req.files.coverImage[0].path;
   }
-  
 
   if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar file is required");
@@ -49,20 +70,20 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Avatar file is required");
   }
 
-  const user  = await User.create({
+  const user = await User.create({
     fullname,
     avatar: avatar.url,
     coverImage: coverImage?.url || "",
     email,
     password,
-    username: username.toLowerCase()
-  })
+    username: username.toLowerCase(),
+  });
 
   const createdUser = await User.findById(user._id).select(
     "-password -refreshToken"
   );
-  if(!createdUser){
-    throw new ApiError(500 , "Somthing went wrong while registring a user")
+  if (!createdUser) {
+    throw new ApiError(500, "Somthing went wrong while registring a user");
   }
   // console.log("\nusername: ", username);
   // console.log("fullname: ", fullname);
@@ -73,10 +94,102 @@ const registerUser = asyncHandler(async (req, res) => {
   // console.log(req.files?.avatar);
   // console.log(req.files);
 
-  return res.status(201).json(
-    new ApiResponse(200 , createdUser , "User registered successfully")
-  )
-
+  return res
+    .status(201)
+    .json(new ApiResponse(200, createdUser, "User registered successfully"));
 });
 
-export { registerUser };
+// // todos for login a user
+// req body -> data
+// username or email
+// find tha user
+// password check
+// access and refresh tocken
+// send cookies
+
+const loginUser = asyncHandler(async (req, res) => {
+  const { email, username, password } = req.body;
+
+  if (!username || !email) {
+    throw new ApiError(
+      400,
+      `${
+        !username && !email
+          ? "Username and email"
+          : !username
+            ? "username"
+            : !email
+              ? "email"
+              : "God knows what is missing"
+      } is required`
+    );
+  }
+
+  const user = await User.findOne({
+    $or: [{ username }, { email }],
+  });
+
+  if (!user) {
+    throw new ApiError(404, "user does not exist");
+  }
+
+  const isPasswordValid = await user.isPasswordCorrect(password);
+
+    if (!isPasswordValid) {
+      throw new ApiError(401, "invalid user credentials");
+    }
+
+    const {accessToken , refreshToken} = await generateAccessAndReffreshTokens(user._id)
+
+    const loggedInUser = User.findById(user._id).select(" -password -refreshToken")
+
+    const options = {
+      httpOnly: true,
+      secure: true
+    }
+
+    return res
+    .status(200)
+    .cookie("accesToken", accessToken, options)
+    .cookie("refreshToken", refreshToken , options)
+    .json(
+      new ApiResponse(200, {
+        user: loggedInUser, accessToken , refreshToken
+      },
+      "User logged In Successfully"
+      )
+    )
+});
+
+
+const logoutUser = asyncHandler(async(req,res) => {
+  User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        refreshToken: undefined
+      }
+    },
+    {
+      new: true
+    }
+  )
+
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+
+  return res
+    .status(200)
+    .cookie("accesToken", options)
+    .cookie("refreshToken", options)
+    .json(
+      new ApiResponse(
+        200,
+        "User logged In Successfully"
+      )
+    );
+})
+
+export { registerUser, loginUser  , logoutUser};
