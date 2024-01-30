@@ -4,7 +4,7 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinery.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
-import  mongoose  from "mongoose";
+import mongoose from "mongoose";
 
 const generateAccessAndReffreshTokens = async (userId) => {
   try {
@@ -96,14 +96,13 @@ const loginUser = asyncHandler(async (req, res) => {
   if (!username || !email) {
     throw new ApiError(
       400,
-      `${
-        !username && !email
-          ? "Username and email"
-          : !username
-            ? "username"
-            : !email
-              ? "email"
-              : "God knows what is missing"
+      `${!username && !email
+        ? "Username and email"
+        : !username
+          ? "username"
+          : !email
+            ? "email"
+            : "God knows what is missing"
       } is required`
     );
   }
@@ -188,24 +187,24 @@ const refreshAccesstoken = asyncHandler(async (req, res) => {
 
   try {
     const decodedToken = jwt.verify(incomingRefershToken, process.env.REFFRESH_TOKEN_SECRAT);
-    
+
     const user = User.findById(decodedToken?._id)
-  
-    if(!user){
+
+    if (!user) {
       throw new ApiError(401, "Invalid refresh token")
     }
-  
-    if(incomingRefershToken !== user?.refreshToken){
+
+    if (incomingRefershToken !== user?.refreshToken) {
       throw new ApiError(401, "Refresh token is expired or used");
     }
-  
+
     const options = {
       httpOnly: true,
       secure: true
     }
-  
-    const {accessToken,newRefreshToken} = await generateAccessAndReffreshTokens(user._id)
-  
+
+    const { accessToken, newRefreshToken } = await generateAccessAndReffreshTokens(user._id)
+
     return res
       .status(200)
       .cookie("accessToken", accessToken)
@@ -213,7 +212,7 @@ const refreshAccesstoken = asyncHandler(async (req, res) => {
       .json(
         new ApiResponse(
           200,
-          {accessToken, refreshToken :newRefreshToken,},
+          { accessToken, refreshToken: newRefreshToken, },
           "Access token refreshed"
         )
       )
@@ -333,11 +332,11 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "Cover image updated successfully"));
 });
 
-const getUserChannelProfile = asyncHandler(async (req , res) => {
+const getUserChannelProfile = asyncHandler(async (req, res) => {
 
-  const {username} = req.params
+  const { username } = req.params
 
-  if(!username?.trim()){
+  if (!username?.trim()) {
     throw new ApiError(400, "somthing went missing")
   }
 
@@ -394,26 +393,81 @@ const getUserChannelProfile = asyncHandler(async (req , res) => {
     },
   ]);
 
-  if(!channel?.length){
+  if (!channel?.length) {
     throw new ApiError(404, "channel does not exists")
   }
 
   return res
-  .status(200)
-  .json(
-    new ApiResponse(200, channel[0] , "User channel fetched successfully")
-  )
+    .status(200)
+    .json(
+      new ApiResponse(200, channel[0], "User channel fetched successfully")
+    )
 });
 
-export { 
-   registerUser,
-   loginUser,
-   logoutUser,
-   refreshAccesstoken,
-   changeCurrentPassword,
-   getCurrentUser,
-   updateAccountDetails,
-   updateUserAvatar,
-   updateUserCoverImage,
-   getUserChannelProfile
+const getWatchHistory = asyncHandler(async(req, res) => {
+  const user = await User.aggregate([
+      {
+          $match: {
+              _id: new mongoose.Types.ObjectId(req.user._id)
+          }
+      },
+      {
+          $lookup: {
+              from: "Video",
+              localField: "watchHistory",
+              foreignField: "_id",
+              as: "watchHistory",
+              pipeline: [
+                  {
+                      $lookup: {
+                          from: "users",
+                          localField: "owner",
+                          foreignField: "_id",
+                          as: "owner",
+                          pipeline: [
+                              {
+                                  $project: {
+                                      fullName: 1,
+                                      username: 1,
+                                      avatar: 1
+                                  }
+                              }
+                          ]
+                      }
+                  },
+                  {
+                      $addFields:{
+                          owner:{
+                              $first: "$owner"
+                          }
+                      }
+                  }
+              ]
+          }
+      }
+  ])
+
+  return res
+  .status(200)
+  .json(
+      new ApiResponse(
+          200,
+          user[0].watchHistory,
+          "Watch history fetched successfully"
+      )
+  )
+})
+
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  refreshAccesstoken,
+  changeCurrentPassword,
+  getCurrentUser,
+  updateAccountDetails,
+  updateUserAvatar,
+  updateUserCoverImage,
+  getUserChannelProfile,
+  getWatchHistory
 };
