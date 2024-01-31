@@ -6,11 +6,6 @@ const videoSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "User",
     },
-    title: {
-      type: String,
-      required: true,
-      index: true,
-    },
     description: {
       type: String,
     },
