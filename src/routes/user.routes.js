@@ -39,7 +39,7 @@ router.route("/register").post(
 
     router.route("/change-password").post(verifyJWT,changeCurrentPassword);
 
-    router.route("current-user").get(verifyJWT , getCurrentUser);
+    router.route("/current-user").get(verifyJWT , getCurrentUser);
 
     router.route("/update-Account-Details").patch(verifyJWT,updateAccountDetails);
 
@@ -47,7 +47,7 @@ router.route("/register").post(
 
     router.route("/update-CoverImage").post(verifyJWT, upload.single("coverImage"), updateUserCoverImage);
 
-    router.route("/c/:username").get(verifyJWT, getUserChannelProfile)
+    router.route("/channel/:username").get(verifyJWT, getUserChannelProfile)
 
     router.route("/history").get(verifyJWT, getWatchHistory)
     

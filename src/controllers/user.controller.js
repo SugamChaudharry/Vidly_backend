@@ -2,6 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinery.js";
+import { v2 as cloudinary } from 'cloudinary';
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
@@ -11,7 +12,7 @@ const generateAccessAndRefreshTokens = async (userId) => {
     const user = await User.findById(userId);
     const accessToken = user.generateAccessToken();
     const refreshToken = user.generateRefreshToken();
-    
+
     user.refreshToken = refreshToken;
     user.save({ validateBeforeSave: false });
     return { accessToken, refreshToken };
@@ -97,14 +98,13 @@ const loginUser = asyncHandler(async (req, res) => {
   if (!username || !email) {
     throw new ApiError(
       400,
-      `${
-        !username && !email
-          ? "Username and email"
-          : !username
-            ? "username"
-            : !email
-              ? "email"
-              : "God knows what is missing"
+      `${!username && !email
+        ? "Username and email"
+        : !username
+          ? "username"
+          : !email
+            ? "email"
+            : "God knows what is missing"
       } is required`
     );
   }
@@ -157,7 +157,7 @@ const logoutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user._id,
     {
-      $set: {
+      $unset: {
         refreshToken: 1,
       },
     },
@@ -175,12 +175,13 @@ const logoutUser = asyncHandler(async (req, res) => {
     .status(200)
     .clearCookie("accessToken", options)
     .clearCookie("refreshToken", options)
-    .json(new ApiResponse(200, {}, "User logged In Successfully"));
+    .json(new ApiResponse(200, {}, "User logged out Successfully"));
 });
 
 const refreshAccesstoken = asyncHandler(async (req, res) => {
   const incomingRefershToken =
     req.cookies.refreshToken || req.body.refreshToken;
+
 
   if (!incomingRefershToken) {
     throw new ApiError(401, "Unauthorized Excess");
@@ -192,7 +193,7 @@ const refreshAccesstoken = asyncHandler(async (req, res) => {
       process.env.REFFRESH_TOKEN_SECRAT
     );
 
-    const user = User.findById(decodedToken?._id);
+    const user = await User.findById(decodedToken?._id);
 
     if (!user) {
       throw new ApiError(401, "Invalid refresh token");
@@ -202,13 +203,8 @@ const refreshAccesstoken = asyncHandler(async (req, res) => {
       throw new ApiError(401, "Refresh token is expired or used");
     }
 
-    const options = {
-      httpOnly: true,
-      secure: true,
-    };
-
     const { accessToken, newRefreshToken } =
-      await generateAccessAndReffreshTokens(user._id);
+      await generateAccessAndRefreshTokens(user._id);
 
     return res
       .status(200)
@@ -228,10 +224,8 @@ const refreshAccesstoken = asyncHandler(async (req, res) => {
 
 const changeCurrentPassword = asyncHandler(async (req, res) => {
   const { oldPassword, newPassword } = req.body;
-  console.log({ oldPassword, newPassword });
 
   const user = await User.findById(req.user?._id);
-  console.log(user);
 
   const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
 
@@ -282,8 +276,12 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
   if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar file is missing");
   }
-
   //TODO: delete old image - assignment
+  const userr = await User.findById(req.user?._id);
+  const PublicID = userr.avatar.split("/")[userr.avatar.split("/").length - 1].split(".")[0];
+  cloudinary.uploader
+    .destroy(PublicID)
+    .then(console.log);
 
   const avatar = await uploadOnCloudinary(avatarLocalPath);
 
@@ -314,6 +312,11 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
   }
 
   //TODO: delete old image - assignment
+  const userr = await User.findById(req.user?._id);
+  const PublicID = userr.coverImage.split("/")[userr.coverImage.split("/").length - 1].split(".")[0];
+  cloudinary.uploader
+    .destroy(PublicID)
+    .then(console.log);
 
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
@@ -343,7 +346,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     throw new ApiError(400, "somthing went missing");
   }
 
-  const channel = User.aggregate([
+  const channel = await User.aggregate([
     {
       $match: {
         username: username?.toLowerCase(),
@@ -351,7 +354,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     },
     {
       $lookup: {
-        from: "Subscription",
+        from: "subscriptions",
         localField: "_id",
         foreignField: "channel",
         as: "subscribers",
@@ -359,10 +362,10 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     },
     {
       $lookup: {
-        from: "Subscription",
+        from: "subscriptions",
         localField: "_id",
         foreignField: "subscriber",
-        as: "subscribersTo",
+        as: "subscribedTo",
       },
     },
     {
@@ -370,7 +373,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         subscribersCount: {
           $size: "$subscribers",
         },
-        channelsubscribedToCount: {
+        channelsSubscribedToCount: {
           $size: "$subscribedTo",
         },
         isSubscribed: {
@@ -404,7 +407,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     .status(200)
     .json(
       new ApiResponse(200, channel[0], "User channel fetched successfully")
-    );
+    );  
 });
 
 const getWatchHistory = asyncHandler(async (req, res) => {
@@ -424,7 +427,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
           {
             $lookup: {
               from: "users",
-              localField: "owner",
+              localField: "owner", 
               foreignField: "_id",
               as: "owner",
               pipeline: [
