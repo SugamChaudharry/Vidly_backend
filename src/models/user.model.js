@@ -61,7 +61,8 @@ userSchema.methods.isPasswordCorrect = async function(password){
     return await bcrypt.compare(password , this.password)
 }
 
-userSchema.methods.generateAccessToken = function(){
+userSchema.methods.generateAccessToken = function () {
+  try {
     return jwt.sign(
       {
         _id: this._id,
@@ -74,8 +75,14 @@ userSchema.methods.generateAccessToken = function(){
         expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
       }
     );
-}
-userSchema.methods.generateRefreshToken = function(){
+  } catch (error) {
+    console.error("Error generating access token:", error);
+    throw new Error("Access token generation failed");
+  }
+};
+
+userSchema.methods.generateRefreshToken = function () {
+  try {
     return jwt.sign(
       {
         _id: this._id,
@@ -85,6 +92,11 @@ userSchema.methods.generateRefreshToken = function(){
         expiresIn: process.env.REFFRESH_TOKEN_EXPIRY,
       }
     );
-}
+  } catch (error) {
+    console.error("Error generating refresh token:", error);
+    throw new Error("Refresh token generation failed");
+  }
+};
+
 
 export const User = mongoose.model("User",userSchema)
