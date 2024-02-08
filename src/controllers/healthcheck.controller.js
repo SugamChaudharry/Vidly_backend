@@ -11,8 +11,7 @@ const healthcheck = asyncHandler(async (req, res) => {
         new ApiResponse(
             200,
             null,
-            "OK",
-            "Healthcheck is OK"
+            "OK"
         )
     )
 })
