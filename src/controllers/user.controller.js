@@ -79,14 +79,6 @@ const registerUser = asyncHandler(async (req, res) => {
   if (!createdUser) {
     throw new ApiError(500, "Somthing went wrong while registring a user");
   }
-  // console.log("\nusername: ", username);
-  // console.log("fullname: ", fullname);
-  // console.log("email: ", email);
-  // console.log("password: ", password);
-  // console.log("req.body:", req.body);
-  // console.log(existedUser);
-  // console.log(req.files?.avatar);
-  // console.log(req.files);
 
   return res
     .status(201)
@@ -258,7 +250,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     req.user?._id,
     {
       $set: {
-        fullName,
+        fullname: fullName,
         email: email,
       },
     },
