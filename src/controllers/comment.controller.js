@@ -13,7 +13,6 @@ const getVideoComments = asyncHandler(async (req, res) => {
 
   const skip = (page - 1) * limit;
   const comments = await Comment.find({video:videoId}).skip(skip).limit(limit);
-  console.log(comments);
 
   const totalComments = await Comment.countDocuments(videoId);
   res.status(200).json(

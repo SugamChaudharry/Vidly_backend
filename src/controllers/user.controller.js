@@ -335,7 +335,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
   const { username } = req.params;
 
   if (!username?.trim()) {
-    throw new ApiError(400, "somthing went missing");
+    throw new ApiError(400, "username is missing");
   }
 
   const channel = await User.aggregate([
@@ -382,7 +382,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         fullName: 1,
         username: 1,
         subscribersCount: 1,
-        channelsubscribedToCount: 1,
+        channelsSubscribedToCount: 1,
         isSubscribed: 1,
         avatar: 1,
         coverImage: 1,
@@ -399,7 +399,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     .status(200)
     .json(
       new ApiResponse(200, channel[0], "User channel fetched successfully")
-    );  
+    );
 });
 
 const getWatchHistory = asyncHandler(async (req, res) => {
@@ -419,7 +419,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
           {
             $lookup: {
               from: "users",
-              localField: "owner", 
+              localField: "owner",
               foreignField: "_id",
               as: "owner",
               pipeline: [

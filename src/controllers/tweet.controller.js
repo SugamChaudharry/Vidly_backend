@@ -20,10 +20,9 @@ const createTweet = asyncHandler(async (req, res) => {
 const getUserTweets = asyncHandler(async (req, res) => {
     // TODO: get user tweets
     const { userId } = req.params
+    if(!mongoose.Types.ObjectId.isValid(userId))
+        throw new ApiError(404, "invalid params id")
 
-    if(!mongoose.Types.ObjectId.isValid(userId)){
-        return res.status(400).json(new ApiResponse(404, "Invalid user id"));
-    }
     const tweets = await Tweet.find({
         owner: userId
     })
@@ -39,10 +38,8 @@ const updateTweet = asyncHandler(async (req, res) => {
     //TODO: update tweet
     const { tweetId } = req.params
     const { content } = req.body
-
-    if(!mongoose.Types.ObjectId.isValid(tweetId)){
-        throw new ApiError(404, "id is not valid");
-    }
+    if(!mongoose.Types.ObjectId.isValid(tweetId))
+        throw new ApiError(404, "invalid params id")
 
     const tweet = await Tweet.findByIdAndUpdate(tweetId, {
         $set: {
@@ -56,10 +53,8 @@ const updateTweet = asyncHandler(async (req, res) => {
 const deleteTweet = asyncHandler(async (req, res) => {
     //TODO: delete tweet
     const { tweetId } = req.params;
-
-    if(!mongoose.Types.ObjectId.isValid(tweetId)){
-        throw new ApiError(404, "id is not valid");
-    }
+    if(!mongoose.Types.ObjectId.isValid(tweetId))
+        throw new ApiError(404, "invalid params id")
 
     const deletedTweet = await Tweet.findByIdAndDelete(tweetId);
 

@@ -73,11 +73,9 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
 const getVideoById = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
+  if(!mongoose.Types.ObjectId.isValid(videoId))
+    throw new ApiError(404, "invalid params id")
 
-  if (!mongoose.Types.ObjectId.isValid(videoId)) {
-    return res.status(400).json(new ApiResponse(404, "Invalid video id"));
-  }
-  //TODO: get video by id
   const video = await Video.findById(videoId).populate(
     "owner",
     "username email"
@@ -91,10 +89,8 @@ const getVideoById = asyncHandler(async (req, res) => {
 
 const updateVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(videoId)) {
-    return res.status(400).json(new ApiResponse(404, "Invalid video id"));
-  }
+  if(!mongoose.Types.ObjectId.isValid(videoId))
+    throw new ApiError(404, "invalid params id")
 
   const { title, description } = req.body;
 
@@ -136,10 +132,8 @@ const updateVideo = asyncHandler(async (req, res) => {
 
 const deleteVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
-  //TODO: delete video
-  if (!mongoose.Types.ObjectId.isValid(videoId)) {
-    return res.status(400).json(new ApiResponse(404, "Invalid video id"));
-  }
+  if(!mongoose.Types.ObjectId.isValid(videoId))
+    throw new ApiError(404, "invalid params id")
 
   const video = await Video.findById(videoId);
 
@@ -161,10 +155,8 @@ const deleteVideo = asyncHandler(async (req, res) => {
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(videoId)) {
-    return res.status(400).json(new ApiResponse(404, "Invalid video id"));
-  }
+  if(!mongoose.Types.ObjectId.isValid(videoId))
+    throw new ApiError(404, "invalid params id")
 
   const video = await Video.findById(videoId);
   if (!video) {
