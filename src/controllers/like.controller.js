@@ -6,7 +6,6 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 
 const toggleVideoLike = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
-  //TODO: toggle like on video
   if (!mongoose.Types.ObjectId.isValid(videoId))
     throw new ApiError(404, "not valid video id");
 
@@ -25,15 +24,12 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
       video: videoId,
       likedBy: req.user._id,
     });
-    res
-      .status(200)
-      .json(new ApiResponse(200, newLike, "liked successfully"));
+    res.status(200).json(new ApiResponse(200, newLike, "liked successfully"));
   }
 });
 
 const toggleCommentLike = asyncHandler(async (req, res) => {
   const { commentId } = req.params;
-  //TODO: toggle like on comment
   if (!mongoose.Types.ObjectId.isValid(commentId))
     throw new ApiError(404, "not valid video id");
 
@@ -52,15 +48,12 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
       comments: commentId,
       likedBy: req.user._id,
     });
-    res
-      .status(200)
-      .json(new ApiResponse(200, newLike, "liked successfully"));
+    res.status(200).json(new ApiResponse(200, newLike, "liked successfully"));
   }
 });
 
 const toggleTweetLike = asyncHandler(async (req, res) => {
   const { tweetId } = req.params;
-  //TODO: toggle like on tweet
   if (!mongoose.Types.ObjectId.isValid(tweetId))
     throw new ApiError(404, "not valid video id");
 
@@ -79,15 +72,19 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
       tweet: tweetId,
       likedBy: req.user._id,
     });
-    res
-      .status(200)
-      .json(new ApiResponse(200, newLike, "liked successfully"));
+    res.status(200).json(new ApiResponse(200, newLike, "liked successfully"));
   }
 });
 
 const getLikedVideos = asyncHandler(async (req, res) => {
-  const likedVideos = await Like.find({ likedBy: req.user.id }).populate('video')
-  return res.status(200).json(new ApiResponse(200,likedVideos,"got all liked videos successfully"));
+  const likedVideos = await Like.find({ likedBy: req.user.id }).populate(
+    "video"
+  );
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, likedVideos, "got all liked videos successfully")
+    );
 });
 
 export { toggleCommentLike, toggleTweetLike, toggleVideoLike, getLikedVideos };

@@ -14,7 +14,7 @@ const videoSchema = new Schema(
       required: true,
       index: true,
     },
-    videofile: {
+    videoFile: {
         type: String,
         required: true
     },

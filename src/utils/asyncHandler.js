@@ -4,7 +4,7 @@ const asyncHandler = (requestHandler) => (req, res, next) => {
 
 export { asyncHandler };
 
-// another methord
+// another method
 // const asyncHandler = (fn) => async(req, res, next) => {
 //     try {
 //         await fn(req, res, next);

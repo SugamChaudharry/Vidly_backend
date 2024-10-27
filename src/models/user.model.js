@@ -17,18 +17,18 @@ const userSchema = new Schema(
       required: true,
       unique: true,
     },
-    fullname: {
+    fullName: {
       type: String,
       required: true,
       trim: true,
       index: true,
     },
     avatar:{
-        type: String, // cloudinary se url
+        type: String,
         required: true
     },
     coverImage:{
-        type: String, // cloudinary se url
+        type: String,
     },
     watchHistory:[
         {
@@ -68,7 +68,7 @@ userSchema.methods.generateAccessToken = function () {
         _id: this._id,
         email: this.email,
         username: this.username,
-        fullname: this.fullname,
+        fullName: this.fullName,
       },
       process.env.ACCESS_TOKEN_SECRET,
       {
@@ -87,9 +87,9 @@ userSchema.methods.generateRefreshToken = function () {
       {
         _id: this._id,
       },
-      process.env.REFFRESH_TOKEN_SECRAT,
+      process.env.REFRESH_TOKEN_SECRET,
       {
-        expiresIn: process.env.REFFRESH_TOKEN_EXPIRY,
+        expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
       }
     );
   } catch (error) {

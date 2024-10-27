@@ -5,14 +5,15 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 const getVideoComments = asyncHandler(async (req, res) => {
-  //TODO: get all comments for a video
   const { page = 1, limit = 10 } = req.query;
   const { videoId } = req.params;
   if (!mongoose.Types.ObjectId.isValid(videoId))
     throw new ApiError(404, "invalid params id");
 
   const skip = (page - 1) * limit;
-  const comments = await Comment.find({video:videoId}).skip(skip).limit(limit);
+  const comments = await Comment.find({ video: videoId })
+    .skip(skip)
+    .limit(limit);
 
   const totalComments = await Comment.countDocuments(videoId);
   res.status(200).json(
@@ -30,7 +31,6 @@ const getVideoComments = asyncHandler(async (req, res) => {
 });
 
 const addComment = asyncHandler(async (req, res) => {
-  // TODO: add a comment to a video
   const { content } = req.body;
   console.log(content);
   const { videoId } = req.params;
@@ -52,36 +52,38 @@ const addComment = asyncHandler(async (req, res) => {
 });
 
 const updateComment = asyncHandler(async (req, res) => {
-  // TODO: update a comment
   const { content } = req.body;
   const { commentId } = req.params;
-  if(!mongoose.Types.ObjectId.isValid(commentId))
-    throw new ApiError(404, "invalid params id")
+  if (!mongoose.Types.ObjectId.isValid(commentId))
+    throw new ApiError(404, "invalid params id");
   if (!content || content === "")
     throw new ApiError(404, "comment content must not we empty");
 
   const updatedComment = await Comment.findByIdAndUpdate(
     commentId,
     {
-        $set: {
-            content: content
-        }
+      $set: {
+        content: content,
+      },
     },
-    {new: true}
-  )
+    { new: true }
+  );
 
-  res.status(200).json(new ApiResponse(200, updatedComment, "comment updated successfully"))
+  res
+    .status(200)
+    .json(new ApiResponse(200, updatedComment, "comment updated successfully"));
 });
 
 const deleteComment = asyncHandler(async (req, res) => {
-  // TODO: delete a comment
   const { commentId } = req.params;
-  if(!mongoose.Types.ObjectId.isValid(commentId))
-    throw new ApiError(404, "invalid params id")
+  if (!mongoose.Types.ObjectId.isValid(commentId))
+    throw new ApiError(404, "invalid params id");
 
-  await Comment.findByIdAndDelete(commentId)
+  await Comment.findByIdAndDelete(commentId);
 
-  res.status(200).json(new ApiResponse(200, {}, "comment deleted successfully"))
+  res
+    .status(200)
+    .json(new ApiResponse(200, {}, "comment deleted successfully"));
 });
 
 export { getVideoComments, addComment, updateComment, deleteComment };

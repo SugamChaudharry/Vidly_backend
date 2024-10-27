@@ -4,13 +4,19 @@ import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { uploadOnCloudinary } from "../utils/cloudinery.js";
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { v2 as cloudinary } from "cloudinary";
 
 const getAllVideos = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10, query, sortBy="title", sortType="asc", userId } = req.query;
+  const {
+    page = 1,
+    limit = 10,
+    query,
+    sortBy = "title",
+    sortType = "asc",
+    userId,
+  } = req.query;
 
-  //TODO: get all videos based on query, sort, pagination
   const skip = (page - 1) * limit;
   const filter = query ? { $text: { $search: query } } : {};
   if (userId) {
@@ -23,17 +29,22 @@ const getAllVideos = asyncHandler(async (req, res) => {
   const videos = await Video.find(filter).sort(sort).skip(skip).limit(limit);
 
   const totalVideos = await Video.countDocuments(filter);
-  res.status(200).json(new ApiResponse(200, {
-    totalVideos,
-    page,
-    limit,
-    videos,
-  }, "got all Videos successfully"));
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        totalVideos,
+        page,
+        limit,
+        videos,
+      },
+      "got all Videos successfully"
+    )
+  );
 });
 
 const publishAVideo = asyncHandler(async (req, res) => {
   const { title, description } = req.body;
-  // TODO: get video, upload to cloudinary, create video'
   if ([title, description].some((field) => field === "")) {
     throw new ApiError(400, "title and description are required");
   }
@@ -43,19 +54,19 @@ const publishAVideo = asyncHandler(async (req, res) => {
     throw new ApiError(400, "video and thumbnail are required");
   }
 
-  const videofile = await uploadOnCloudinary(videoLocalPath, "video");
+  const videoFile = await uploadOnCloudinary(videoLocalPath, "video");
   const thumbnail = await uploadOnCloudinary(thumbnailLocalPath, "image");
 
-  if (!videofile || !thumbnail) {
+  if (!videoFile || !thumbnail) {
     throw new ApiError(500, "Failed to upload video or thumbnail");
   }
 
-  const duration = videofile.duration;
+  const duration = videoFile.duration;
 
   const video = await Video.create({
     title,
     description,
-    videofile: videofile.url,
+    videoFile: videoFile.url,
     thumbnail: thumbnail.url,
     duration,
     owner: req.user._id,
@@ -73,8 +84,8 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
 const getVideoById = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
-  if(!mongoose.Types.ObjectId.isValid(videoId))
-    throw new ApiError(404, "invalid params id")
+  if (!mongoose.Types.ObjectId.isValid(videoId))
+    throw new ApiError(404, "invalid params id");
 
   const video = await Video.findById(videoId).populate(
     "owner",
@@ -89,8 +100,8 @@ const getVideoById = asyncHandler(async (req, res) => {
 
 const updateVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
-  if(!mongoose.Types.ObjectId.isValid(videoId))
-    throw new ApiError(404, "invalid params id")
+  if (!mongoose.Types.ObjectId.isValid(videoId))
+    throw new ApiError(404, "invalid params id");
 
   const { title, description } = req.body;
 
@@ -132,12 +143,12 @@ const updateVideo = asyncHandler(async (req, res) => {
 
 const deleteVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
-  if(!mongoose.Types.ObjectId.isValid(videoId))
-    throw new ApiError(404, "invalid params id")
+  if (!mongoose.Types.ObjectId.isValid(videoId))
+    throw new ApiError(404, "invalid params id");
 
   const video = await Video.findById(videoId);
 
-  const videoFilePublicID = video.videofile.split("/").pop().split(".")[0];
+  const videoFilePublicID = video.videoFile.split("/").pop().split(".")[0];
   const thumbnailFilePublicID = video.thumbnail.split("/").pop().split(".")[0];
 
   cloudinary.uploader
@@ -155,8 +166,8 @@ const deleteVideo = asyncHandler(async (req, res) => {
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
-  if(!mongoose.Types.ObjectId.isValid(videoId))
-    throw new ApiError(404, "invalid params id")
+  if (!mongoose.Types.ObjectId.isValid(videoId))
+    throw new ApiError(404, "invalid params id");
 
   const video = await Video.findById(videoId);
   if (!video) {
