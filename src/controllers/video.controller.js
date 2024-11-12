@@ -74,7 +74,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
   const createdVideo = await Video.findById(video._id).populate(
     "owner",
-    "username email"
+    "userName email"
   );
 
   res
@@ -89,7 +89,7 @@ const getVideoById = asyncHandler(async (req, res) => {
 
   const video = await Video.findById(videoId).populate(
     "owner",
-    "username email"
+    "userName email"
   );
   console.log("video", video);
   if (!video) {

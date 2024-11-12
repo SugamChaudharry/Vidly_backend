@@ -25,20 +25,21 @@ const generateAccessAndRefreshTokens = async (userId) => {
 };
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { username, fullName, email, password } = req.body;
-
+  const { userName, fullName, email, password } = req.body;
+  console.log("yes");
+  
   if (
-    [fullName, email, username, password].some((field) => field?.trim() === "")
+    [fullName, email, userName, password].some((field) => field?.trim() === "")
   ) {
     throw new ApiError(400, "all fields are required");
   }
 
   const existedUser = await User.findOne({
-    $or: [{ username }, { email }],
+    $or: [{ userName }, { email }],
   });
 
   if (existedUser) {
-    throw new ApiError(409, "User with email or username already exists");
+    throw new ApiError(409, "User with email or userName already exists");
   }
 
   const avatarLocalPath = req.files?.avatar[0]?.path;
@@ -70,7 +71,7 @@ const registerUser = asyncHandler(async (req, res) => {
     coverImage: coverImage?.url || "",
     email,
     password,
-    username: username.toLowerCase(),
+    userName: userName.toLowerCase(),
   });
 
   const createdUser = await User.findById(user._id).select(
@@ -86,24 +87,16 @@ const registerUser = asyncHandler(async (req, res) => {
 });
 
 const loginUser = asyncHandler(async (req, res) => {
-  const { email, username, password } = req.body;
-  if (!username || !email) {
+  const { email, userName, password } = req.body;
+  if (!userName && !email) {
     throw new ApiError(
       400,
-      `${
-        !username && !email
-          ? "Username and email"
-          : !username
-            ? "username"
-            : !email
-              ? "email"
-              : "God knows what is missing"
-      } is required`
+      "Either userName or email is required to login user"
     );
   }
 
   const user = await User.findOne({
-    $or: [{ username }, { email }],
+    $or: [{ userName }, { email }],
   });
 
   if (!user) {
@@ -255,7 +248,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
       },
     },
     { new: true }
-  ).select("-password");
+  ).select("-password -refreshToken");
 
   return res
     .status(200)
@@ -288,7 +281,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
       },
     },
     { new: true }
-  ).select("-password");
+  ).select("-password -refreshToken");
 
   return res
     .status(200)
@@ -324,7 +317,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
       },
     },
     { new: true }
-  ).select("-password");
+  ).select("-password -refreshToken");
 
   return res
     .status(200)
@@ -334,16 +327,16 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 });
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
-  const { username } = req.params;
+  const { userName } = req.params;
 
-  if (!username?.trim()) {
-    throw new ApiError(400, "username is missing");
+  if (!userName?.trim()) {
+    throw new ApiError(400, "userName is missing");
   }
 
   const channel = await User.aggregate([
     {
       $match: {
-        username: username?.toLowerCase(),
+        userName: userName?.toLowerCase(),
       },
     },
     {
@@ -382,7 +375,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     {
       $project: {
         fullName: 1,
-        username: 1,
+        userName: 1,
         subscribersCount: 1,
         channelsSubscribedToCount: 1,
         isSubscribed: 1,
@@ -428,7 +421,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
                 {
                   $project: {
                     fullName: 1,
-                    username: 1,
+                    userName: 1,
                     avatar: 1,
                   },
                 },
