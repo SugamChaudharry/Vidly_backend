@@ -26,8 +26,7 @@ const generateAccessAndRefreshTokens = async (userId) => {
 
 const registerUser = asyncHandler(async (req, res) => {
   const { userName, fullName, email, password } = req.body;
-  console.log("yes");
-  
+
   if (
     [fullName, email, userName, password].some((field) => field?.trim() === "")
   ) {
@@ -118,6 +117,7 @@ const loginUser = asyncHandler(async (req, res) => {
   );
 
   const options = {
+    sameSite: true,
     httpOnly: true,
     secure: true,
   };
@@ -153,6 +153,7 @@ const logoutUser = asyncHandler(async (req, res) => {
   );
 
   const options = {
+    sameSite: true,
     httpOnly: true,
     secure: true,
   };
