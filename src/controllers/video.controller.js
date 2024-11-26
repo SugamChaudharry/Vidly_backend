@@ -23,7 +23,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json(new ApiResponse(404, "Invalid user id"));
     }
-    filter.userId = userId;
+    filter.owner = userId;
   }
   const sort = sortBy ? { [sortBy]: sortType === "desc" ? -1 : 1 } : {};
   const videos = await Video.find(filter).sort(sort).skip(skip).limit(limit);
