@@ -26,7 +26,11 @@ const getAllVideos = asyncHandler(async (req, res) => {
     filter.owner = userId;
   }
   const sort = sortBy ? { [sortBy]: sortType === "desc" ? -1 : 1 } : {};
-  const videos = await Video.find(filter).sort(sort).skip(skip).limit(limit);
+  const videos = await Video.find(filter)
+  .populate("owner", "fullName userName avatar")
+    .sort(sort)
+    .skip(skip)
+    .limit(limit)
 
   const totalVideos = await Video.countDocuments(filter);
   res.status(200).json(
