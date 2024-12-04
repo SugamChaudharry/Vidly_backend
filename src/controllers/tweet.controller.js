@@ -25,7 +25,6 @@ const getUserTweets = asyncHandler(async (req, res) => {
     owner: userId,
   });
 
-  console.log("tweets : ", tweets);
   if (!tweets) {
     throw new ApiError(404, "tweets not found");
   }

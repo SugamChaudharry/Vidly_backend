@@ -32,7 +32,6 @@ const getVideoComments = asyncHandler(async (req, res) => {
 
 const addComment = asyncHandler(async (req, res) => {
   const { content } = req.body;
-  console.log(content);
   const { videoId } = req.params;
   if (!mongoose.Types.ObjectId.isValid(videoId))
     throw new ApiError(404, "invalid params id");

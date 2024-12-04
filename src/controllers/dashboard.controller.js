@@ -63,7 +63,6 @@ const getChannelStats = asyncHandler(async (req, res) => {
     },
   ]);
 
-  console.log(totalLikes);
   res.status(200).json(
     new ApiResponse(
       200,
