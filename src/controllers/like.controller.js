@@ -4,6 +4,30 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
+const getVideosLikes = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(videoId))
+    throw new ApiError(404, "not valid video id");
+
+  const likeCount = await Like.find({
+    video: videoId,
+  }).countDocuments();
+  const likedByUser = await Like.findOne({
+    video: videoId,
+    likedBy: req.user._id,
+  }).countDocuments();
+
+  res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { likeCount, likedByUser: likedByUser > 0 ? true : false },
+        "liked successfully"
+      )
+    );
+});
+
 const toggleVideoLike = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
   if (!mongoose.Types.ObjectId.isValid(videoId))
@@ -87,4 +111,10 @@ const getLikedVideos = asyncHandler(async (req, res) => {
     );
 });
 
-export { toggleCommentLike, toggleTweetLike, toggleVideoLike, getLikedVideos };
+export {
+  toggleCommentLike,
+  toggleTweetLike,
+  toggleVideoLike,
+  getLikedVideos,
+  getVideosLikes,
+};
