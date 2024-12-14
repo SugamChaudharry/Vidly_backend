@@ -4,6 +4,30 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
+const getVideoSubscriber = asyncHandler(async (req, res) => {
+  const { channelId } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(channelId))
+    throw new ApiError(404, "invalid channel id");
+
+  const subscribers = await Subscription.find({
+    channel: channelId,
+  });
+  const subscribeByUser = await Subscription.findOne({
+    channel: channelId,
+    subscriber: req.user._id,
+  }).countDocuments();
+
+  res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { subscribers, subscribeByUser: subscribeByUser > 0 ? true : false },
+        "success"
+      )
+    );
+});
+
 const toggleSubscription = asyncHandler(async (req, res) => {
   const { channelId } = req.params;
   if (!mongoose.Types.ObjectId.isValid(channelId))
@@ -92,4 +116,9 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, channel, "channel list retrieved successfully"));
 });
 
-export { toggleSubscription, getUserChannelSubscribers, getSubscribedChannels };
+export {
+  toggleSubscription,
+  getUserChannelSubscribers,
+  getSubscribedChannels,
+  getVideoSubscriber,
+};

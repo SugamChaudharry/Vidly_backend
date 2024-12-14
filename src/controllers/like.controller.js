@@ -23,7 +23,7 @@ const getVideosLikes = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         { likeCount, likedByUser: likedByUser > 0 ? true : false },
-        "liked successfully"
+        "success"
       )
     );
 });
