@@ -19,6 +19,6 @@ router
     .route("/:channelId")
     .get(getVideoSubscriber);
 
-router.route("/u/:subscriberId").get(getSubscribedChannels);
+router.route("/").get(getSubscribedChannels);
 
 export default router

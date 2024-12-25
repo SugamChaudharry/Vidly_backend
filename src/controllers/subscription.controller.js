@@ -121,9 +121,10 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
       },
     },
     {
-      $project: {
-        subscriber: 1,
-      },
+      $unwind: "$subscriber",
+    },
+    {
+      $replaceRoot: { newRoot: "$subscriber" },
     },
   ]);
 
@@ -139,59 +140,58 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
 });
 
 const getSubscribedChannels = asyncHandler(async (req, res) => {
-  const { subscriberId } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(subscriberId)) {
-    throw new ApiError(404, "Invalid subscribed ID");
-  }
-
-  // const subscribers = await Subscription.aggregate([
-  //   {
-  //     $match: {
-  //       subscriber: new mongoose.Types.ObjectId(channelId), // Match based on the channel field
-  //     },
-  //   },
-  //   {
-  //     $lookup: {
-  //       from: "users",
-  //       localField: "channel",
-  //       foreignField: "_id",
-  //       as: "channelinfo",
-  //       pipeline: [
-  //         {
-  //           $lookup: {
-  //             from: "subscriptions",
-  //             localField: "_id",
-  //             foreignField: "channel",
-  //             as: "subscribers",
-  //           },
-  //         },
-  //         {
-  //           $addFields: {
-  //             subscribersCount: {
-  //               $size: "$subscribers"
-  //             },
-  //           }
-  //         }
-  //       ],
-  //     },
-  //   },
-  // ]);
-  const subscriptions = await Subscription.find({
-    subscriber: subscriberId,
-  }).populate("channel", "fullName userName avatar");
-
-  if (!subscriptions || subscriptions.length === 0) {
-    return res
-      .status(404)
-      .json(new ApiResponse(404, [], "No channels found for this user"));
-  }
-
-  const channel = subscriptions.map((subscription) => subscription.channel);
+  const subscriptions = await Subscription.aggregate([
+    {
+      $match: {
+        subscriber: req.user._id,
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "channel",
+        foreignField: "_id",
+        as: "channelinfo",
+        pipeline: [
+          {
+            $lookup: {
+              from: "subscriptions",
+              localField: "_id",
+              foreignField: "channel",
+              as: "subscribers",
+            },
+          },
+          {
+            $addFields: {
+              subscribers: {
+                $size: "$subscribers",
+              },
+            },
+          },
+          {
+            $project: {
+              subscribers: 1,
+              userName: 1,
+              fullName: 1,
+              avatar: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $unwind: "$channelinfo",
+    },
+    {
+      $replaceRoot: { newRoot: "$channelinfo" },
+    },
+  ]);
 
   res
     .status(200)
-    .json(new ApiResponse(200, channel, "channel list retrieved successfully"));
+    .json(
+      new ApiResponse(200, subscriptions, "channel list retrieved successfully")
+    );
 });
 
 export {
