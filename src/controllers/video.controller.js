@@ -1,38 +1,85 @@
 import mongoose, { isValidObjectId } from "mongoose";
 import { Video } from "../models/video.model.js";
-import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { v2 as cloudinary } from "cloudinary";
 
+// GET /videos?sortBy=views,createdAt&sortType=desc,asc
 const getAllVideos = asyncHandler(async (req, res) => {
   const {
     page = 1,
     limit = 10,
     query,
-    sortBy = "title",
-    sortType = "asc",
+    sortBy = ["createdAt","views"],
+    sortType = ["desc","desc"],
     userId,
   } = req.query;
 
   const skip = (page - 1) * limit;
-  const filter = query ? { $text: { $search: query } } : {};
+  const matchStage = {};
+
+  if (query) {
+    matchStage.$text = { $search: query };
+  }
   if (userId) {
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json(new ApiResponse(404, "Invalid user id"));
     }
-    filter.owner = userId;
+    matchStage.owner = new mongoose.Types.ObjectId(userId);
   }
-  const sort = sortBy ? { [sortBy]: sortType === "desc" ? -1 : 1 } : {};
-  const videos = await Video.find(filter)
-  .populate("owner", "fullName userName avatar")
-    .sort(sort)
-    .skip(skip)
-    .limit(limit)
 
-  const totalVideos = await Video.countDocuments(filter);
+// Create the sort stage dynamically for multiple fields
+  const sortStage = {};
+  if (Array.isArray(sortBy) && Array.isArray(sortType)) {
+    sortBy.forEach((field, index) => {
+      const order = sortType[index] === "desc" ? -1 : 1;
+      sortStage[field] = order;
+    });
+  }
+
+  const pipeline = [
+    { $match: matchStage }, // Filter stage
+    {
+      $lookup: {
+        from: "users", // The collection to join with
+        localField: "owner", // The field in the `videos` collection
+        foreignField: "_id", // The field in the `users` collection
+        as: "owner",
+      },
+    },
+    { $unwind: "$owner" }, // Convert the array created by `$lookup` into an object
+    {
+      $project: {
+        thumbnail: 1,
+        title: 1,
+        description: 1,
+        views: 1,
+        duration: 1,
+        isPublished: 1,
+        "owner.fullName": 1,
+        "owner.userName": 1,
+        "owner.avatar": 1,
+        createdAt: 1,
+      },
+    },
+    { $sort: sortStage }, // Sorting stage
+    { $skip: skip }, // Pagination: skip documents
+    { $limit: parseInt(limit, 10) }, // Pagination: limit the number of documents
+  ];
+
+  // Add a separate pipeline to count the total number of documents matching the filters
+  const countPipeline = [{ $match: matchStage }, { $count: "totalVideos" }];
+
+  const [videos, totalVideosResult] = await Promise.all([
+    Video.aggregate(pipeline), // Fetch the paginated and sorted results
+    Video.aggregate(countPipeline), // Count the total number of videos
+  ]);
+
+  const totalVideos =
+    totalVideosResult.length > 0 ? totalVideosResult[0].totalVideos : 0;
+
   res.status(200).json(
     new ApiResponse(
       200,
@@ -42,11 +89,10 @@ const getAllVideos = asyncHandler(async (req, res) => {
         limit,
         videos,
       },
-      "got all Videos successfully"
+      "Got all Videos successfully"
     )
   );
 });
-
 const publishAVideo = asyncHandler(async (req, res) => {
   const { title, description } = req.body;
   if ([title, description].some((field) => field === "")) {
@@ -88,19 +134,88 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
 const getVideoById = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
-  if (!mongoose.Types.ObjectId.isValid(videoId))
-    throw new ApiError(404, "invalid params id");
 
-  const video = await Video.findById(videoId).populate(
-    "owner",
-    "fullName userName email avatar"
-  );
-  if (!video) {
+  if (!mongoose.Types.ObjectId.isValid(videoId)) {
+    throw new ApiError(404, "Invalid video ID");
+  }
+
+  // Increment the views count
+  await Video.updateOne({ _id: videoId }, { $inc: { views: 1 } });
+
+  // Aggregation pipeline to fetch the video with populated owner
+  const pipeline = [
+    { $match: { _id: new mongoose.Types.ObjectId(videoId) } }, // Match video by ID
+    {
+      $lookup: {
+        from: "users", // Collection to join
+        localField: "owner", // Field in the `Video` collection
+        foreignField: "_id", // Field in the `User` collection
+        as: "owner",
+        pipeline: [
+          {
+            $lookup: {
+              from: "subscriptions",
+              foreignField: "channel",
+              localField: "_id",
+              as: "subscribers",
+            },
+          },
+          {
+            $addFields: {
+              subscribers: "$subscribers.subscriber",
+            },
+          },
+          {
+            $addFields: {
+              subscriberCount: {
+                $size: "$subscribers",
+              },
+              isSubscribed: {
+                $cond: {
+                  if: { $in: [req.user._id, "$subscribers"] },
+                  then: true,
+                  else: false,
+                },
+              },
+            },
+          },
+          {
+            $project: {
+              _id: 1,
+              fullName: 1,
+              userName: 1,
+              avatar: 1,
+              subscriberCount: 1,
+              isSubscribed: 1,
+            },
+          },
+        ],
+      },
+    },
+    { $unwind: "$owner" }, // Convert the owner array into an object
+    {
+      $project: {
+        title: 1,
+        description: 1,
+        videoFile: 1,
+        thumbnail: 1,
+        duration: 1,
+        views: 1,
+        createdAt: 1,
+        owner: 1,
+      },
+    },
+  ];
+
+  const result = await Video.aggregate(pipeline);
+
+  if (!result || result.length === 0) {
     throw new ApiError(404, "Video not found");
   }
+
+  const video = result[0]; // Extract the single video document
   res.status(200).json(new ApiResponse(200, video, "Video found successfully"));
 });
-
 const updateVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
   if (!mongoose.Types.ObjectId.isValid(videoId))
