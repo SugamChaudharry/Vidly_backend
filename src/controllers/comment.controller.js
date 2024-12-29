@@ -17,7 +17,6 @@ const getVideoComments = asyncHandler(async (req, res) => {
     .limit(limit);
 
   const totalComments = await Comment.countDocuments({ video: videoId });
-  console.log(totalComments)
   res.status(200).json(
     new ApiResponse(
       200,

@@ -1,10 +1,11 @@
-import mongoose, { isValidObjectId } from "mongoose";
+import mongoose from "mongoose";
 import { Video } from "../models/video.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { v2 as cloudinary } from "cloudinary";
+import { User } from "../models/user.model.js";
 
 // GET /videos?sortBy=views,createdAt&sortType=desc,asc
 const getAllVideos = asyncHandler(async (req, res) => {
@@ -12,7 +13,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
     page = 1,
     limit = 10,
     query,
-    sortBy = ["createdAt","views"],
+    sortBy = ["views","createdAt"],
     sortType = ["desc","desc"],
     userId,
   } = req.query;
@@ -138,11 +139,12 @@ const getVideoById = asyncHandler(async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(videoId)) {
     throw new ApiError(404, "Invalid video ID");
   }
+  
+  const user = await User.findOne({_id: req.user._id})
+  await user.addToWatchHistory(videoId)
 
-  // Increment the views count
   await Video.updateOne({ _id: videoId }, { $inc: { views: 1 } });
 
-  // Aggregation pipeline to fetch the video with populated owner
   const pipeline = [
     { $match: { _id: new mongoose.Types.ObjectId(videoId) } }, // Match video by ID
     {

@@ -23,7 +23,7 @@ const getUserTweets = asyncHandler(async (req, res) => {
 
   const tweets = await Tweet.find({
     owner: userId,
-  });
+ }).sort({ createdAt: -1 });
 
   if (!tweets) {
     throw new ApiError(404, "tweets not found");

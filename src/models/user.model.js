@@ -1,4 +1,4 @@
-import mongoose , {Schema} from "mongoose"
+import mongoose, { Schema } from "mongoose"
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt"
 
@@ -23,45 +23,45 @@ const userSchema = new Schema(
       trim: true,
       index: true,
     },
-    avatar:{
-        type: String,
-        required: true
+    avatar: {
+      type: String,
+      required: true
     },
-    coverImage:{
-        type: String,
+    coverImage: {
+      type: String,
     },
-    watchHistory:[
-        {
-            type: Schema.Types.ObjectId,
-            ref: "Video"
-        }
+    watchHistory: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Video"
+      }
     ],
-    password:{
-        type: String,
-        required: [true , "Password is required"]
+    password: {
+      type: String,
+      required: [true, "Password is required"]
     },
-    refreshToken:{
-        type: String
+    refreshToken: {
+      type: String
     }
   },
-    {
-    timestamps : true
-    }
+  {
+    timestamps: true
+  }
 );
 
 
-userSchema.pre("save", async function (next) {
-    if(!this.isModified("password")) return next()
+userSchema.pre("save", async function(next) {
+  if (!this.isModified("password")) return next()
 
-    this.password = await bcrypt.hash(this.password, 10)
-    next()
+  this.password = await bcrypt.hash(this.password, 10)
+  next()
 })
 
-userSchema.methods.isPasswordCorrect = async function(password){
-    return await bcrypt.compare(password , this.password)
+userSchema.methods.isPasswordCorrect = async function(password) {
+  return await bcrypt.compare(password, this.password)
 }
 
-userSchema.methods.generateAccessToken = function () {
+userSchema.methods.generateAccessToken = function() {
   try {
     return jwt.sign(
       {
@@ -81,7 +81,7 @@ userSchema.methods.generateAccessToken = function () {
   }
 };
 
-userSchema.methods.generateRefreshToken = function () {
+userSchema.methods.generateRefreshToken = function() {
   try {
     return jwt.sign(
       {
@@ -98,5 +98,16 @@ userSchema.methods.generateRefreshToken = function () {
   }
 };
 
+userSchema.methods.addToWatchHistory = async function(videoId) {
+  if (!this.watchHistory.includes(videoId)){
+    this.watchHistory.push(videoId);
 
-export const User = mongoose.model("User",userSchema)
+    // Limit history size to 50
+    if (this.watchHistory.length > 50) {
+      this.watchHistory.shift(); 
+    }
+    await this.save()
+  }
+}
+
+export const User = mongoose.model("User", userSchema)

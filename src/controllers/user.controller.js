@@ -6,6 +6,7 @@ import { v2 as cloudinary } from "cloudinary";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
+import { Video } from "../models/video.model.js";
 
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
@@ -117,7 +118,7 @@ const loginUser = asyncHandler(async (req, res) => {
   );
 
   const options = {
-    sameSite: 'None',
+    sameSite: "None",
     httpOnly: true,
     secure: true,
   };
@@ -153,10 +154,10 @@ const logoutUser = asyncHandler(async (req, res) => {
   );
 
   const options = {
-    sameSite: 'None',
+    sameSite: "None",
     httpOnly: true,
     secure: true,
-    };
+  };
 
   return res
     .status(200)
@@ -265,7 +266,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user?._id);
   const PublicID = user.avatar
     .split("/")
-    [user.avatar.split("/").length - 1].split(".")[0];
+  [user.avatar.split("/").length - 1].split(".")[0];
   cloudinary.uploader.destroy(PublicID).then(console.log);
 
   const avatar = await uploadOnCloudinary(avatarLocalPath);
@@ -301,7 +302,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user?._id);
   const PublicID = user.coverImage
     .split("/")
-    [user.coverImage.split("/").length - 1].split(".")[0];
+  [user.coverImage.split("/").length - 1].split(".")[0];
   cloudinary.uploader.destroy(PublicID).then(console.log);
 
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
@@ -399,57 +400,76 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 });
 
 const getWatchHistory = asyncHandler(async (req, res) => {
-  const user = await User.aggregate([
+  // Find the user and retrieve the watchHistory IDs
+  const userWithHistory = await User.aggregate([
     {
       $match: {
         _id: new mongoose.Types.ObjectId(req.user._id),
       },
     },
     {
+      $project: {
+        watchHistory: 1,
+      },
+    },
+  ]);
+
+  if (!userWithHistory.length || !userWithHistory[0].watchHistory.length) {
+    return res
+      .status(404)
+      .json(new ApiResponse(404, null, "No watch history found"));
+  }
+
+  const videoIds = userWithHistory[0].watchHistory;
+
+  // Retrieve the videos with owners and limit to the most recent 10
+  const videos = await Video.aggregate([
+    {
+      $match: {
+        _id: { $in: videoIds.map((id) => new mongoose.Types.ObjectId(id)) },
+      },
+    },
+    {
       $lookup: {
-        from: "videos",
-        localField: "watchHistory",
+        from: "users",
+        localField: "owner",
         foreignField: "_id",
-        as: "watchHistory",
+        as: "owner",
         pipeline: [
           {
-            $lookup: {
-              from: "users",
-              localField: "owner",
-              foreignField: "_id",
-              as: "owner",
-              pipeline: [
-                {
-                  $project: {
-                    fullName: 1,
-                    userName: 1,
-                    avatar: 1,
-                  },
-                },
-              ],
-            },
-          },
-          {
-            $addFields: {
-              owner: {
-                $first: "$owner",
-              },
+            $project: {
+              userName: 1,
+              avatar: 1,
             },
           },
         ],
       },
     },
+    {
+      $addFields: {
+        owner: { $first: "$owner" },
+      },
+    },
+    {
+      $project: {
+        title: 1,
+        description: 1,
+        videoFile: 1,
+        thumbnail: 1,
+        views: 1,
+        duration: 1,
+        owner: 1,
+        createdAt: 1,
+      },
+    },
+    {
+      $limit: 10, // Limit to the most recent 10 videos
+    },
   ]);
 
   return res
     .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        user[0].watchHistory,
-        "Watch history fetched successfully"
-      )
-    );
+    .json(new ApiResponse(200, videos, "Watch history fetched successfully"));
 });
 
 export {
