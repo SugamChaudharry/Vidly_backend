@@ -1,6 +1,6 @@
 import { Video } from "../models/video.model.js";
+import { Tweet } from "../models/tweets.model.js";
 import { Subscription } from "../models/subscription.model.js";
-import { Like } from "../models/likes.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
@@ -13,56 +13,32 @@ const getChannelStats = asyncHandler(async (req, res) => {
     totalViews += video[i].views;
   }
   const subscribers = await Subscription.find({ channel: id }).countDocuments();
-  const totalLikes = await Like.aggregate([
+  const totalVideosLikes = await Video.aggregate([
+    {
+      $match: {
+        owner: id,
+      },
+    },
     {
       $lookup: {
-        from: "like",
-        localField: id.toString(),
+        from: "likes",
         foreignField: "video",
-        as: "userVideoLike",
+        localField: "_id",
+        as: "videoLikes",
       },
     },
     {
-      $lookup: {
-        from: "like",
-        localField: id.toString(),
-        foreignField: "tweet",
-        as: "userTweetLike",
-      },
-    },
-    {
-      $lookup: {
-        from: "like",
-        localField: id.toString(),
-        foreignField: "comment",
-        as: "userCommentLike",
-      },
-    },
-    {
-      $addFields: {
-        totalVideosLikes: { $size: "$userVideoLike" },
-        totalTweetsLikes: { $size: "$userTweetLike" },
-        totalCommentsLikes: { $size: "$userCommentLike" },
+      $project: {
+        videoLikes: { $size: "$videoLikes" },
       },
     },
     {
       $group: {
         _id: null,
-        totalVideosLikes: { $sum: "$totalVideosLikes" },
-        totalTweetsLikes: { $sum: "$totalTweetsLikes" },
-        totalCommentsLikes: { $sum: "$totalCommentsLikes" },
-      },
-    },
-    {
-      $project: {
-        _id: 0,
-        totalVideosLikes: 1,
-        totalTweetsLikes: 1,
-        totalCommentsLikes: 1,
+        totalLikes: { $sum: "$videoLikes" },
       },
     },
   ]);
-
   res.status(200).json(
     new ApiResponse(
       200,
@@ -71,7 +47,8 @@ const getChannelStats = asyncHandler(async (req, res) => {
         totalViews: totalViews,
         totalVideos: totalVideos,
         subscribers: subscribers,
-        totalLikes: totalLikes,
+        totalVideosLikes:
+          totalVideosLikes.length > 0 ? totalVideosLikes[0].totalLikes : 0,
       },
       "stats fetch successfully"
     )
