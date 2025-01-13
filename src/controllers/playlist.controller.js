@@ -1,4 +1,4 @@
-import { isValidObjectId } from "mongoose";
+import mongoose, { isValidObjectId } from "mongoose";
 import { Playlist } from "../models/playlist.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -27,7 +27,50 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
   const { userId } = req.params;
   if (!isValidObjectId(userId)) throw new ApiError(404, "user id not valid");
 
-  const playlist = await Playlist.find({ owner: userId });
+  const playlist = await Playlist.aggregate([
+    {
+      $match: { owner: new mongoose.Types.ObjectId(userId) },
+    },
+    {
+      $addFields: {
+        firstVideo: { $arrayElemAt: ["$videos", 0] },
+      },
+    },
+    {
+      $lookup: {
+        from: "videos",
+        foreignField: "_id",
+        localField: "firstVideo",
+        as: "firstVideo",
+      },
+    },
+    {
+      $addFields: {
+        thumbnail: "$firstVideo.thumbnail",
+        videos: { $size: "$videos" },
+      },
+    },
+    {
+      $addFields: {
+        thumbnail: {
+          $cond: {
+            if: { $gt: [{ $size: "$thumbnail" }, 0] },
+            then: { $arrayElemAt: ["$thumbnail", 0] },
+            else: null,
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        playlistName: 1,
+        description: 1,
+        videos: 1,
+        thumbnail: 1,
+        createdAt: 1,
+      },
+    },
+  ]);
   res
     .status(200)
     .json(new ApiResponse(200, playlist, "playlist fetch successfully"));
@@ -38,10 +81,53 @@ const getPlaylistById = asyncHandler(async (req, res) => {
   if (!isValidObjectId(playlistId))
     throw new ApiError(404, "playlist id not valid");
 
-  const playlist = await Playlist.findById(playlistId);
+  const playlist = await Playlist.aggregate([
+    {
+      $match: { _id: new mongoose.Types.ObjectId(playlistId) },
+    },
+    {
+      $lookup: {
+        from: "videos",
+        foreignField: "owner",
+        localField: "owner",
+        as: "videos",
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        foreignField: "_id",
+        localField: "owner",
+        as: "owner",
+        pipeline: [
+          {
+            $project: {
+              userName: 1,
+              fullName: 1,
+              avatar: 1,
+            }
+          }
+        ]
+      },
+    },
+    {
+      $addFields: {
+        owner: { $arrayElemAt: ["$owner", 0] },
+      },
+    },
+    {
+      $project: {
+        playlistName: 1,
+        description: 1,
+        videos: 1,
+        owner: 1,
+        createdAt: 1,
+      }
+    }
+  ]);
   res
     .status(200)
-    .json(new ApiResponse(200, playlist, "playlist fetch successfully"));
+    .json(new ApiResponse(200, playlist[0], "playlist fetch successfully"));
 });
 
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
