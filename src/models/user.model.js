@@ -1,6 +1,6 @@
-import mongoose, { Schema } from "mongoose"
+import mongoose, { Schema } from "mongoose";
 import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt"
+import bcrypt from "bcrypt";
 
 const userSchema = new Schema(
   {
@@ -25,7 +25,7 @@ const userSchema = new Schema(
     },
     avatar: {
       type: String,
-      required: true
+      required: true,
     },
     coverImage: {
       type: String,
@@ -33,35 +33,41 @@ const userSchema = new Schema(
     watchHistory: [
       {
         type: Schema.Types.ObjectId,
-        ref: "Video"
-      }
+        ref: "Video",
+      },
+    ],
+    tags: [
+      {
+        name: { type: String, required: true },
+        count: { type: Number, default: 0 },
+        timestamp: { type: Date, default: Date.now },
+      },
     ],
     password: {
       type: String,
-      required: [true, "Password is required"]
+      required: [true, "Password is required"],
     },
     refreshToken: {
-      type: String
-    }
+      type: String,
+    },
   },
   {
-    timestamps: true
+    timestamps: true,
   }
 );
 
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
 
-userSchema.pre("save", async function(next) {
-  if (!this.isModified("password")) return next()
+  this.password = await bcrypt.hash(this.password, 10);
+  next();
+});
 
-  this.password = await bcrypt.hash(this.password, 10)
-  next()
-})
+userSchema.methods.isPasswordCorrect = async function (password) {
+  return await bcrypt.compare(password, this.password);
+};
 
-userSchema.methods.isPasswordCorrect = async function(password) {
-  return await bcrypt.compare(password, this.password)
-}
-
-userSchema.methods.generateAccessToken = function() {
+userSchema.methods.generateAccessToken = function () {
   try {
     return jwt.sign(
       {
@@ -81,7 +87,7 @@ userSchema.methods.generateAccessToken = function() {
   }
 };
 
-userSchema.methods.generateRefreshToken = function() {
+userSchema.methods.generateRefreshToken = function () {
   try {
     return jwt.sign(
       {
@@ -98,16 +104,70 @@ userSchema.methods.generateRefreshToken = function() {
   }
 };
 
-userSchema.methods.addToWatchHistory = async function(videoId) {
-  if (!this.watchHistory.includes(videoId)){
+userSchema.methods.addToWatchHistory = async function (videoId) {
+  if (!this.watchHistory.includes(videoId)) {
     this.watchHistory.push(videoId);
 
     // Limit history size to 50
     if (this.watchHistory.length > 50) {
-      this.watchHistory.shift(); 
+      this.watchHistory.shift();
     }
-    await this.save()
+    await this.save();
   }
-}
+};
+userSchema.methods.updateTagPreferences = async function(newTags) {
+  try {
+    if (!this.tags) {
+      this.tags = [];
+    }
 
-export const User = mongoose.model("User", userSchema)
+    const tagsToProcess = newTags.slice(0, 10);
+
+    for (const tag of tagsToProcess) {
+      const existingTagIndex = this.tags.findIndex(t => t.name === tag);
+      if (existingTagIndex !== -1) {
+        this.tags[existingTagIndex].count++;
+      } else {
+        this.tags.push({
+          name: tag,
+          count: 1,
+          timestamp: Date.now()
+        });
+      }
+    }
+
+    const maxCount = Math.max(...this.tags.map(t => t.count));
+    if (maxCount > 100) {
+      const scaleFactor = 100 / maxCount;
+      this.tags.forEach(tag => {
+        tag.count = Math.max(1, Math.floor(tag.count * scaleFactor));
+      });
+    }
+
+    this.tags.sort((a, b) => b.count - a.count);
+
+    const finalTags = [];
+    
+    finalTags.push(...this.tags.slice(0, 4));
+
+    const remainingTags = this.tags.slice(4);
+    remainingTags.sort((a, b) => b.timestamp - a.timestamp);
+    finalTags.push(...remainingTags.slice(0, 3));
+
+    const leftoverTags = remainingTags.slice(3);
+    leftoverTags.sort((a, b) => b.count - a.count);
+    finalTags.push(...leftoverTags.slice(0, 3));
+
+    this.tags = finalTags;
+
+    await this.save();
+    return this.tags;
+
+  } catch (error) {
+    console.error("Error updating tag preferences:", error);
+    throw new Error("Failed to update tag preferences");
+  }
+};
+
+
+export const User = mongoose.model("User", userSchema);
