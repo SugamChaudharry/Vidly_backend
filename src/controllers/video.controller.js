@@ -17,6 +17,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
     sortBy = ["views", "createdAt"],
     sortType = ["desc", "desc"],
     userId,
+    tag,
   } = req.query;
 
   const skip = (page - 1) * limit;
@@ -30,6 +31,9 @@ const getAllVideos = asyncHandler(async (req, res) => {
       return res.status(400).json(new ApiResponse(404, "Invalid user id"));
     }
     matchStage.owner = new mongoose.Types.ObjectId(userId);
+  }
+  if (tag) {
+    matchStage.tags = tag;
   }
 
   // Create the sort stage dynamically for multiple fields
@@ -60,6 +64,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
         views: 1,
         duration: 1,
         isPublished: 1,
+        tags: 1,
         "owner.fullName": 1,
         "owner.userName": 1,
         "owner.avatar": 1,
@@ -97,7 +102,31 @@ const getAllVideos = asyncHandler(async (req, res) => {
 });
 
 const publishAVideo = asyncHandler(async (req, res) => {
-  const { title, description, tags = [] } = req.body;
+  const { title, description } = req.body;
+  let tags = req.body.tags;
+
+  // Parse tags if it's a string
+  if (typeof tags === "string") {
+    try {
+      tags = JSON.parse(tags);
+    } catch (error) {
+      throw new ApiError(400, "Invalid tags format");
+    }
+  }
+
+  if ([title, description].some((field) => field === "")) {
+    throw new ApiError(400, "title and description are required");
+  }
+
+  if (!Array.isArray(tags) || tags.length === 0) {
+    throw new ApiError(400, "At least one tag is required");
+  }
+
+  const videoLocalPath = req.files?.videoFile[0]?.path;
+  const thumbnailLocalPath = req.files?.thumbnail[0]?.path;
+  if (!videoLocalPath || !thumbnailLocalPath) {
+    throw new ApiError(400, "video and thumbnail are required");
+  }
 
   // Function to clean up temporary files
   const cleanupTempFiles = () => {
@@ -114,21 +143,6 @@ const publishAVideo = asyncHandler(async (req, res) => {
   };
 
   try {
-    if ([title, description].some((field) => field === "")) {
-      throw new ApiError(400, "title and description are required");
-    }
-
-    if (!Array.isArray(tags) || tags.length === 0) {
-      throw new ApiError(400, "At least one tag is required");
-    }
-
-    const videoLocalPath = req.files?.videoFile[0]?.path;
-    const thumbnailLocalPath = req.files?.thumbnail[0]?.path;
-    console.log(videoLocalPath, thumbnailLocalPath);
-    if (!videoLocalPath || !thumbnailLocalPath) {
-      throw new ApiError(400, "video and thumbnail are required");
-    }
-
     const videoFile = await uploadOnCloudinary(videoLocalPath, "video");
     const thumbnail = await uploadOnCloudinary(thumbnailLocalPath, "image");
 
@@ -263,7 +277,8 @@ const getVideoById = asyncHandler(async (req, res) => {
 
 const updateVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
-  const { title, description, tags = [] } = req.body;
+  const { title, description } = req.body;
+  let tags = req.body.tags;
   const thumbnailLocalPath = req.file?.path;
 
   // Function to clean up temporary files
@@ -276,6 +291,15 @@ const updateVideo = asyncHandler(async (req, res) => {
       console.log("Error cleaning up files:", error);
     }
   };
+
+  // Parse tags if it's a string
+  if (typeof tags === "string") {
+    try {
+      tags = JSON.parse(tags);
+    } catch (error) {
+      throw new ApiError(400, "Invalid tags format");
+    }
+  }
 
   try {
     if (!mongoose.Types.ObjectId.isValid(videoId)) {
@@ -291,6 +315,7 @@ const updateVideo = asyncHandler(async (req, res) => {
     }
 
     if (!thumbnailLocalPath) {
+      console.log(thumbnailLocalPath, req);
       throw new ApiError(404, "thumbnail not found");
     }
 

@@ -59,10 +59,12 @@ const videoSchema = new Schema(
   { timestamps: true }
 );
 
-videoSchema.index(
-  { title: "text", description: "text", owner: "text" },
-  { weights: { title: 3, description: 1 } }
-);
+// Create text index for search
+videoSchema.index({ title: "text", description: "text" });
+
+// Create index for tag filtering
+videoSchema.index({ tags: 1 });
+
 videoSchema.plugin(mongooseAggregatePaginate);
 
 export const Video = mongoose.model("Video", videoSchema);
