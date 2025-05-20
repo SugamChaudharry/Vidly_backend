@@ -5,15 +5,15 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 const createPlaylist = asyncHandler(async (req, res) => {
-  const { name, description } = req.body;
+  const { title, description } = req.body;
   if (
-    !name ||
+    !title ||
     !description ||
-    [name, description].some((field) => field?.trim() === "")
+    [title, description].some((field) => field?.trim() === "")
   )
     throw new ApiError(400, "all fields are required");
   const playlist = await Playlist.create({
-    playlistName: name,
+    playlistName: title,
     description: description,
     owner: req.user._id,
     videos: [],
@@ -105,9 +105,9 @@ const getPlaylistById = asyncHandler(async (req, res) => {
               userName: 1,
               fullName: 1,
               avatar: 1,
-            }
-          }
-        ]
+            },
+          },
+        ],
       },
     },
     {
@@ -122,8 +122,8 @@ const getPlaylistById = asyncHandler(async (req, res) => {
         videos: 1,
         owner: 1,
         createdAt: 1,
-      }
-    }
+      },
+    },
   ]);
   res
     .status(200)
