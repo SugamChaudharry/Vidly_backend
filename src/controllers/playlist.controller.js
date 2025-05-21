@@ -88,8 +88,8 @@ const getPlaylistById = asyncHandler(async (req, res) => {
     {
       $lookup: {
         from: "videos",
-        foreignField: "owner",
-        localField: "owner",
+        foreignField: "_id",
+        localField: "videos",
         as: "videos",
       },
     },
@@ -136,6 +136,12 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
     throw new ApiError(404, "id not valid");
 
   const playlist = await Playlist.findById(playlistId);
+  
+  // Check if video already exists in playlist
+  if (playlist.videos.includes(videoId)) {
+    throw new ApiError(400, "Video already exists in playlist");
+  }
+
   playlist.videos.push(videoId);
   playlist.save();
   res
