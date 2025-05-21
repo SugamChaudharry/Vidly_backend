@@ -2,9 +2,19 @@
 
 A robust backend API for a video streaming platform built with Node.js, Express, and MongoDB. Vidly provides a feature-rich video streaming experience with advanced user preferences, analytics, and content management capabilities.
 
+## 🌐 Live Demo
+
+Visit the live demo at: [https://vidly.sugamwtw.tech/](https://vidly.sugamwtw.tech.app/)
+
+## 🔗 Links
+
+- Frontend Repository: [Vidly Frontend](https://github.com/SugamChaudharry/Vidly)
+- Live Demo: [Vidly](https://vidly.sugamwtw.tech/)
+
 ## 🚀 Features
 
 ### Core Features
+
 - User authentication and authorization
 - Video upload and management
 - Cloud storage integration with Cloudinary
@@ -37,17 +47,20 @@ A robust backend API for a video streaming platform built with Node.js, Express,
 ## 🔧 Installation
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/SugamChaudharry/Vidly_backend.git
 cd Vidly_backend
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
 
 3. Create a `.env` file in the root directory and add the following variables:
+
 ```env
 PORT=8000
 MONGODB_URL=your_mongodb_connection_string
@@ -58,6 +71,7 @@ CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 ```
 
 4. Start the development server:
+
 ```bash
 npm run dev
 ```
@@ -92,9 +106,11 @@ Vidly_backend/
 ## �� API Endpoints
 
 ### Health Check
+
 - GET /api/v1/health - Check API health status
 
 ### Authentication & User Management
+
 - POST /api/v1/users/register - Register a new user
 - POST /api/v1/users/login - User login
 - POST /api/v1/users/logout - User logout
@@ -108,6 +124,7 @@ Vidly_backend/
 - GET /api/v1/users/history - Get user watch history
 
 ### Video Management
+
 - GET /api/v1/videos - Get all videos
 - POST /api/v1/videos - Upload a new video
 - GET /api/v1/videos/:videoId - Get video by ID
@@ -116,12 +133,14 @@ Vidly_backend/
 - PATCH /api/v1/videos/toggle/publish/:videoId - Toggle video publish status
 
 ### Comments
+
 - GET /api/v1/comments/:videoId - Get video comments
 - POST /api/v1/comments/:videoId - Add comment to video
 - DELETE /api/v1/comments/c/:commentId - Delete comment
 - PATCH /api/v1/comments/c/:commentId - Update comment
 
 ### Likes
+
 - POST /api/v1/likes/toggle/v/:videoId - Toggle video like
 - GET /api/v1/likes/video/:videoId - Get video likes
 - POST /api/v1/likes/toggle/c/:commentId - Toggle comment like
@@ -129,6 +148,7 @@ Vidly_backend/
 - GET /api/v1/likes/videos - Get liked videos
 
 ### Playlists
+
 - POST /api/v1/playlists - Create playlist
 - GET /api/v1/playlists/:playlistId - Get playlist by ID
 - PATCH /api/v1/playlists/:playlistId - Update playlist
@@ -138,28 +158,31 @@ Vidly_backend/
 - GET /api/v1/playlists/user/:userId - Get user playlists
 
 ### Subscriptions
+
 - GET /api/v1/subscriptions/c/:channelId - Get channel subscribers
 - POST /api/v1/subscriptions/c/:channelId - Toggle channel subscription
 - GET /api/v1/subscriptions/:channelId - Get video subscribers
 - GET /api/v1/subscriptions - Get subscribed channels
 
 ### Tweets
+
 - POST /api/v1/tweets - Create tweet
 - GET /api/v1/tweets/user/:userId - Get user tweets
 - PATCH /api/v1/tweets/:tweetId - Update tweet
 - DELETE /api/v1/tweets/:tweetId - Delete tweet
 
 ### Dashboard
+
 - GET /api/v1/dashboard/stats - Get channel statistics
 
 ## 👨‍💻 Author
 
-Sugam Chaudhary
+- **Sugam Chaudhary**
+  - GitHub: [@SugamChaudharry](https://github.com/SugamChaudharry)
 
-## 🔗 Links
+## 🙏 Acknowledgments
 
-- Frontend Repository: [Vidly Frontend](https://github.com/SugamChaudharry/Vidly)
-- Live Demo: [Vidly](https://vidly.sugamwtw.tech/)
+- Special thanks to the open-source community for their amazing tools and libraries
 
 ## 📝 License
 
