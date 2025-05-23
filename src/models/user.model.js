@@ -30,12 +30,6 @@ const userSchema = new Schema(
     coverImage: {
       type: String,
     },
-    watchHistory: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "Video",
-      },
-    ],
     tags: [
       {
         name: { type: String, required: true },
@@ -104,17 +98,6 @@ userSchema.methods.generateRefreshToken = function () {
   }
 };
 
-userSchema.methods.addToWatchHistory = async function (videoId) {
-  if (!this.watchHistory.includes(videoId)) {
-    this.watchHistory.push(videoId);
-
-    // Limit history size to 50
-    if (this.watchHistory.length > 50) {
-      this.watchHistory.shift();
-    }
-    await this.save();
-  }
-};
 userSchema.methods.updateTagPreferences = async function(newTags) {
   try {
     if (!this.tags) {
