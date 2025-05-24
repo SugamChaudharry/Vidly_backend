@@ -7,6 +7,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import { Video } from "../models/video.model.js";
+import { WatchHistory } from "../models/watchHistory.model.js";
 
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
@@ -400,76 +401,38 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 });
 
 const getWatchHistory = asyncHandler(async (req, res) => {
-  // Find the user and retrieve the watchHistory IDs
-  const userWithHistory = await User.aggregate([
-    {
-      $match: {
-        _id: new mongoose.Types.ObjectId(req.user._id),
-      },
-    },
-    {
-      $project: {
-        watchHistory: 1,
-      },
-    },
-  ]);
+  const { page = 1, limit = 10 } = req.query;
+  const skip = (page - 1) * limit;
 
-  if (!userWithHistory.length || !userWithHistory[0].watchHistory.length) {
-    return res
-      .status(404)
-      .json(new ApiResponse(404, null, "No watch history found"));
-  }
+  const history = await WatchHistory.find({ user: req.user._id })
+    .sort({ watchedAt: -1 })
+    .skip(skip)
+    .limit(parseInt(limit))
+    .populate({
+      path: 'video',
+      select: 'title description videoFile thumbnail views duration owner tags',
+      populate: {
+        path: 'owner',
+        select: 'userName avatar'
+      }
+    });
 
-  const videoIds = userWithHistory[0].watchHistory;
-
-  // Retrieve the videos with owners and limit to the most recent 10
-  const videos = await Video.aggregate([
-    {
-      $match: {
-        _id: { $in: videoIds.map((id) => new mongoose.Types.ObjectId(id)) },
-      },
-    },
-    {
-      $lookup: {
-        from: "users",
-        localField: "owner",
-        foreignField: "_id",
-        as: "owner",
-        pipeline: [
-          {
-            $project: {
-              userName: 1,
-              avatar: 1,
-            },
-          },
-        ],
-      },
-    },
-    {
-      $addFields: {
-        owner: { $first: "$owner" },
-      },
-    },
-    {
-      $project: {
-        title: 1,
-        description: 1,
-        videoFile: 1,
-        thumbnail: 1,
-        views: 1,
-        duration: 1,
-        owner: 1,
-        createdAt: 1,
-      },
-    },
-    {
-      $limit: 10, // Limit to the most recent 10 videos
-    },
-  ]);
+  const totalHistory = await WatchHistory.countDocuments({ user: req.user._id });
 
   return res
     .status(200)
-    .json(new ApiResponse(200, videos, "Watch history fetched successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        {
+          history,
+          totalHistory,
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(totalHistory / limit)
+        },
+        "Watch history fetched successfully"
+      )
+    );
 });
 
 export {
