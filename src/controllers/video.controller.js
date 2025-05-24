@@ -6,6 +6,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { v2 as cloudinary } from "cloudinary";
 import { User } from "../models/user.model.js";
+import { WatchHistory } from "../models/watchHistory.model.js";
 import fs from "fs";
 
 // GET /videos?sortBy=views,createdAt&sortType=desc,asc
@@ -183,17 +184,36 @@ const getVideoById = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Invalid video ID");
   }
 
-  const user = await User.findOne({ _id: req.user._id });
-  await user.addToWatchHistory(videoId);
+  // Remove any existing entry for this video in user's watch history
+  await WatchHistory.deleteOne({
+    user: req.user._id,
+    video: videoId
+  });
 
-  // Get video details first
-  const video = await Video.findById(videoId);
-  if (!video) {
-    throw new ApiError(404, "Video not found");
+  // Add new watch history entry
+  await WatchHistory.create({
+    user: req.user._id,
+    video: videoId
+  });
+
+  // Maintain 50 video limit in watch history
+  const count = await WatchHistory.countDocuments({ user: req.user._id });
+  if (count > 50) {
+    const oldest = await WatchHistory.find({ user: req.user._id })
+      .sort({ watchedAt: 1 })
+      .limit(count - 50)
+      .select('_id');
+
+    const idsToDelete = oldest.map(doc => doc._id);
+    await WatchHistory.deleteMany({ _id: { $in: idsToDelete } });
   }
 
-  // Update user's tag preferences based on the video's tags
-  await user.updateTagPreferences(video.tags);
+  // Update user's tag preferences
+  const user = await User.findById(req.user._id);
+  const video = await Video.findById(videoId);
+  if (video) {
+    await user.updateTagPreferences(video.tags);
+  }
 
   // Increment video views
   await Video.updateOne({ _id: videoId }, { $inc: { views: 1 } });
