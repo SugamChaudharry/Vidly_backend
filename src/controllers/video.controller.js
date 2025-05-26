@@ -22,7 +22,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
   } = req.query;
 
   const skip = (page - 1) * limit;
-  const matchStage = {};
+  const matchStage = { isPublished: true };
 
   if (query) {
     matchStage.$text = { $search: query };
@@ -414,6 +414,117 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, video, "Publish status updated successfully"));
 });
 
+const getUserVideos = asyncHandler(async (req, res) => {
+  const {
+    page = 1,
+    limit = 10,
+    sortBy = ["createdAt"],
+    sortType = ["desc"],
+  } = req.query;
+
+  const skip = (page - 1) * limit;
+  const matchStage = { owner: req.user._id }; // Get videos of logged-in user
+
+  // Create the sort stage dynamically for multiple fields
+  const sortStage = {};
+  if (Array.isArray(sortBy) && Array.isArray(sortType)) {
+    sortBy.forEach((field, index) => {
+      const order = sortType[index] === "desc" ? -1 : 1;
+      sortStage[field] = order;
+    });
+  }
+
+  const pipeline = [
+    { $match: matchStage },
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+      },
+    },
+    { $unwind: "$owner" },
+    {
+      $project: {
+        thumbnail: 1,
+        title: 1,
+        description: 1,
+        views: 1,
+        duration: 1,
+        isPublished: 1,
+        tags: 1,
+        "owner.fullName": 1,
+        "owner.userName": 1,
+        "owner.avatar": 1,
+        createdAt: 1,
+      },
+    },
+    { $sort: sortStage },
+    { $skip: skip },
+    { $limit: parseInt(limit, 10) },
+  ];
+
+  const countPipeline = [{ $match: matchStage }, { $count: "totalVideos" }];
+
+  const [videos, totalVideosResult] = await Promise.all([
+    Video.aggregate(pipeline),
+    Video.aggregate(countPipeline),
+  ]);
+
+  const totalVideos = totalVideosResult.length > 0 ? totalVideosResult[0].totalVideos : 0;
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        totalVideos,
+        page,
+        limit,
+        videos,
+      },
+      "Got user's videos successfully"
+    )
+  );
+});
+
+const removeFromWatchHistory = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(videoId)) {
+    throw new ApiError(400, "Invalid video ID");
+  }
+
+  const result = await WatchHistory.deleteOne({
+    user: req.user._id,
+    video: videoId
+  });
+
+  if (result.deletedCount === 0) {
+    throw new ApiError(404, "Video not found in watch history");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Video removed from watch history successfully"));
+});
+
+const clearWatchHistory = asyncHandler(async (req, res) => {
+  const result = await WatchHistory.deleteMany({
+    user: req.user._id
+  });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { deletedCount: result.deletedCount },
+        "Watch history cleared successfully"
+      )
+    );
+});
+
 export {
   getAllVideos,
   publishAVideo,
@@ -421,4 +532,7 @@ export {
   updateVideo,
   deleteVideo,
   togglePublishStatus,
+  getUserVideos,
+  removeFromWatchHistory,
+  clearWatchHistory,
 };

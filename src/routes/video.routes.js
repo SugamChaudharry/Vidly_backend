@@ -6,6 +6,9 @@ import {
     publishAVideo,
     togglePublishStatus,
     updateVideo,
+    getUserVideos,
+    removeFromWatchHistory,
+    clearWatchHistory,
 } from "../controllers/video.controller.js"
 import {verifyJWT} from "../middlewares/auth.middleware.js"
 import {upload} from "../middlewares/multer.middleware.js"
@@ -30,6 +33,14 @@ router
     ]),
     publishAVideo
 );
+
+// Add new route for user's videos
+router.get("/user", verifyJWT, getUserVideos);
+
+// Watch history routes
+router.delete("/watch-history/:videoId", verifyJWT, removeFromWatchHistory);
+router.delete("/watch-history/", verifyJWT, clearWatchHistory);
+
 router.use(verifyJWT);
 
 router
