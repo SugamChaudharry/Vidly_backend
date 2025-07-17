@@ -4,8 +4,11 @@
   "description": "learning a backend with chai our code",
   "type": "module",
   "main": "index.js",
+  "type": "commonjs",
   "scripts": {
-    "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js"
+    "dev": "nodemon --watch src --ext ts --exec ts-node src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
   },
   "keywords": [
     "javascript",
@@ -15,8 +18,16 @@
   "author": "Sugam",
   "license": "ISC",
   "devDependencies": {
+    "@types/cookie-parser": "^1.4.9",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^24.1.0",
     "nodemon": "^3.0.3",
-    "prettier": "^3.2.4"
+    "prettier": "^3.2.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

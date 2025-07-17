@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
-import { User } from "../models/user.model.js";
 import dotenv from "dotenv";
-import { DB_NAME } from "../constants.js";
+import { DB_NAME } from "../constants.ts";
 
 dotenv.config();
 
