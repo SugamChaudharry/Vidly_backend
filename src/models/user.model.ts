@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema, Types } from "mongoose";
 import jwt, { SignOptions } from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import { StringValue } from "ms";
 
 export interface UserDoc extends Document {
   _id: Types.ObjectId;
@@ -76,18 +77,18 @@ const userSchema = new Schema<UserDoc>(
   }
 );
 
-userSchema.pre("save", async function(next) {
+userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
 
   this.password = await bcrypt.hash(this.password, 10);
   next();
 });
 
-userSchema.methods.isPasswordCorrect = async function(password: string) {
+userSchema.methods.isPasswordCorrect = async function (password: string) {
   return await bcrypt.compare(password, this.password);
 };
 
-userSchema.methods.generateAccessToken = function(): string {
+userSchema.methods.generateAccessToken = function (): string {
   try {
     const payload = {
       _id: this._id,
@@ -96,8 +97,10 @@ userSchema.methods.generateAccessToken = function(): string {
       fullName: this.fullName,
     };
 
+    const expiresIn = process.env.ACCESS_TOKEN_EXPIRY! as StringValue;
+
     const options: SignOptions = {
-      expiresIn: Number(process.env.ACCESS_TOKEN_EXPIRY),
+      expiresIn,
     };
 
     return jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET!, options);
@@ -107,7 +110,7 @@ userSchema.methods.generateAccessToken = function(): string {
   }
 };
 
-userSchema.methods.generateRefreshToken = function() {
+userSchema.methods.generateRefreshToken = function () {
   try {
     return jwt.sign(
       {
@@ -115,7 +118,7 @@ userSchema.methods.generateRefreshToken = function() {
       },
       process.env.REFRESH_TOKEN_SECRET!,
       {
-        expiresIn: Number(process.env.REFRESH_TOKEN_EXPIRY),
+        expiresIn: process.env.REFRESH_TOKEN_EXPIRY! as StringValue,
       }
     );
   } catch (error) {
@@ -124,7 +127,7 @@ userSchema.methods.generateRefreshToken = function() {
   }
 };
 
-userSchema.methods.updateTagPreferences = async function(newTags: string[]) {
+userSchema.methods.updateTagPreferences = async function (newTags: string[]) {
   try {
     if (!this.tags) {
       this.tags = [];

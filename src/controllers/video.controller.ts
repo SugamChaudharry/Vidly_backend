@@ -88,7 +88,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
     },
     { $sort: sortStage },
     { $skip: skip },
-    { $limit: limit },
+    { $limit: parseInt(limit) },
   ] as PipelineStage[];
 
   const countPipeline = [{ $match: matchStage }, { $count: "totalVideos" }];

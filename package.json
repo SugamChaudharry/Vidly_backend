@@ -2,9 +2,8 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "learning a backend with chai our code",
-  "type": "module",
-  "main": "index.js",
   "type": "commonjs",
+  "main": "index.js",
   "scripts": {
     "dev": "nodemon --watch src --ext ts --exec ts-node src/index.ts",
     "build": "tsc",
@@ -22,6 +21,7 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/ms": "^2.1.0",
     "@types/multer": "^2.0.0",
     "@types/node": "^24.1.0",
     "nodemon": "^3.0.3",
