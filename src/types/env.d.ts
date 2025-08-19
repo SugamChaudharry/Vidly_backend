@@ -1,6 +1,7 @@
 declare namespace NodeJS {
   interface ProcessEnv {
     PORT?: string;
+    NODE_ENV: string;
     MONGODB_URL: string;
 
     CROS_ORIGIN?: string;
@@ -14,5 +15,7 @@ declare namespace NodeJS {
     CLOUDINARY_CLOUD_NAME: string;
     CLOUDINARY_API_KEY: string;
     CLOUDINARY_API_SECRET: string;
+
+    LOG_DIR: string;
   }
 }
